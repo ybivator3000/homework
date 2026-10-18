@@ -2,6 +2,7 @@ package ru.aston.config;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+import ru.aston.entity.User;
 
 public class HibernateUtil {
     private static final SessionFactory sessionFactory = createSessionFactory();
@@ -25,6 +26,8 @@ public class HibernateUtil {
         configuration.setProperty("hibernate.connection.url", dbUrl);
         configuration.setProperty("hibernate.connection.username", dbUser);
         configuration.setProperty("hibernate.connection.password", dbPassword);
+
+        configuration.addAnnotatedClass(User.class);
 
         return configuration.buildSessionFactory();
     }
