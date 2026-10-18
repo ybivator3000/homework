@@ -2,7 +2,7 @@ package ru.aston.config;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
-import ru.aston.entity.User;
+import ru.aston.homework.entity.User;
 
 public class HibernateUtil {
     private static final SessionFactory sessionFactory = createSessionFactory();
