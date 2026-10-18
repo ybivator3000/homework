@@ -4,16 +4,21 @@ import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
 public class HibernateUtil {
-    private static final SessionFactory sessionFactory;
+    private static final SessionFactory sessionFactory = createSessionFactory();
 
-    static {
+    private HibernateUtil() {
+    }
+
+    private static SessionFactory createSessionFactory() {
         Configuration configuration = new Configuration().configure();
 
         String dbUrl = System.getenv("DB_URL");
         String dbUser = System.getenv("DB_USER");
         String dbPassword = System.getenv("DB_PASSWORD");
 
-        if (dbUrl == null || dbUser == null || dbPassword == null) {
+        if (dbUrl == null || dbUrl.isBlank()
+                || dbUser == null || dbUser.isBlank()
+                || dbPassword == null || dbPassword.isBlank()) {
             throw new IllegalStateException("Database environment variables are not configured");
         }
 
@@ -21,7 +26,7 @@ public class HibernateUtil {
         configuration.setProperty("hibernate.connection.username", dbUser);
         configuration.setProperty("hibernate.connection.password", dbPassword);
 
-        sessionFactory = configuration.buildSessionFactory();
+        return configuration.buildSessionFactory();
     }
 
     public static SessionFactory getSessionFactory() {
