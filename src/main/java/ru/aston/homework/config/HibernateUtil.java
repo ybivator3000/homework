@@ -1,4 +1,4 @@
-package ru.aston.config;
+package ru.aston.homework.config;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
