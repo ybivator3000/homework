@@ -3,7 +3,9 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 .kotlin
-
+src/main/java/ru/aston/homework/Main.java
+src/main/java/ru/aston/homework/config/HibernateUtil.java
+src/main/java/ru/aston/homework/dao/*
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml
