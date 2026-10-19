@@ -1,4 +1,4 @@
-package ru.aston.entity;
+package ru.aston.homework.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.Generated;
