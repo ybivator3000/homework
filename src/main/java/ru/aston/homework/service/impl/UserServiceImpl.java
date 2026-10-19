@@ -3,7 +3,7 @@ package ru.aston.homework.service.impl;
 import ru.aston.homework.dto.*;
 import ru.aston.homework.config.TransactionTemplate;
 import ru.aston.homework.util.UserValidator;
-import ru.aston.homework.dao.UserDao;
+import ru.aston.homework.common.dao.UserDao;
 import ru.aston.homework.service.*;
 import java.util.List;
 import java.util.Optional;
