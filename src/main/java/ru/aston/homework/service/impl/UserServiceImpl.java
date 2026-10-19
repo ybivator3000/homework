@@ -1,7 +1,7 @@
 package ru.aston.homework.service.impl;
 
 import ru.aston.homework.config.TransactionTemplate;
-import ru.aston.homework.common.dao.UserDao;
+import ru.aston.homework.dao.user.UserDao;
 import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.dto.UserUpdateRequest;

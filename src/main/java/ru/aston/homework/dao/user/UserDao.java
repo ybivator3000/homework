@@ -1,5 +1,6 @@
-package ru.aston.homework.common.dao;
+package ru.aston.homework.dao.user;
 
+import ru.aston.homework.common.dao.GenericDao;
 import ru.aston.homework.entity.User;
 import org.hibernate.Session;
 

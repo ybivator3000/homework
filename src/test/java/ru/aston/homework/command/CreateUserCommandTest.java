@@ -65,7 +65,7 @@ class CreateUserCommandTest {
 
         String result = output.toString(StandardCharsets.UTF_8);
 
-        assertTrue(result.contains("Имя не должно быть пустым"));
+        assertTrue(result.contains("Name cannot be null"));
         assertTrue(result.contains("Иван"));
     }
 
@@ -82,7 +82,7 @@ class CreateUserCommandTest {
 
         String result = output.toString(StandardCharsets.UTF_8);
 
-        assertTrue(result.contains("Некорректный формат почты"));
+        assertTrue(result.contains("Email must be valid"));
         assertTrue(result.contains("ivan@example.com"));
     }
 
@@ -102,7 +102,7 @@ class CreateUserCommandTest {
         String result = output.toString(StandardCharsets.UTF_8);
 
         assertTrue(result.contains("Введите целое число"));
-        assertTrue(result.contains("Возраст должен быть от 0 до 150"));
+        assertTrue(result.contains("Age must be between"));
         assertTrue(result.contains("Возраст: 21"));
     }
 }
