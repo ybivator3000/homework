@@ -1,6 +1,7 @@
 package ru.aston.homework.util;
 
 import ru.aston.homework.dto.UserCreateRequest;
+import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.exception.ServiceException;
 
 public class UserValidator {
@@ -10,6 +11,11 @@ public class UserValidator {
         isValidName(request.name());
         isValidEmail(request.email());
 
+    }
+    public void validate(UserUpdateRequest request){
+        isValidAge(request.age());
+        isValidName(request.name());
+        isValidEmail(request.email());
     }
 
     public void isValidName(String name) {

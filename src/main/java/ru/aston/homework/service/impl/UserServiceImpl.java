@@ -50,7 +50,33 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse update(UserUpdateRequest request) {
-        return null;
+        log.debug("Updating user: id={}", request.id());
+        validator.validate(request);
+
+        return txTemplate.execute(session -> {
+            User user = userDao.getById(session, request.id())
+                    .orElseThrow(() -> {
+                        log.warn("Update user failed: not found id={}", request.id());
+                        return new ServiceException("User not found: id=" + request.id());
+                    });
+
+            if (!user.getEmail().equalsIgnoreCase(request.email())) {
+                userDao.findByEmail(session, request.email().toLowerCase()).ifPresent(other -> {
+                    if (!other.getId().equals(user.getId())) {
+                        log.warn("Update user failed: email taken email={}", request.email());
+                        throw new ServiceException("Email already taken: " + request.email());
+                    }
+                });
+            }
+
+            user.setName(request.name());
+            user.setEmail(request.email().toLowerCase());
+            user.setAge(request.age());
+
+            User updated = userDao.update(session, user);
+            log.info("User updated: id={}, email={}", updated.getId(), updated.getEmail());
+            return toResponse(updated);
+        });
     }
 
     @Override
