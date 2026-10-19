@@ -81,17 +81,36 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Optional<UserResponse> findById(Long id) {
-        return Optional.empty();
+        log.debug("Finding user: id={}", id);
+        return txTemplate.executeReadOnly(session ->
+                userDao.getById(session, id).map(this::toResponse)
+        );
     }
 
     @Override
     public List<UserResponse> findAll() {
-        return List.of();
+        log.debug("Finding all users");
+        return txTemplate.executeReadOnly(session -> {
+            List<UserResponse> users = userDao.getAll(session).stream()
+                    .map(this::toResponse)
+                    .toList();
+            log.debug("Found {} users", users.size());
+            return users;
+        });
     }
 
     @Override
     public void delete(Long id) {
-
+        log.debug("Deleting user: id={}", id);
+        txTemplate.executeVoid(session -> {
+            User user = userDao.getById(session, id)
+                    .orElseThrow(() -> {
+                        log.warn("Delete user failed: not found id={}", id);
+                        return new ServiceException("User not found: id=" + id);
+                    });
+            userDao.delete(session, user);
+            log.info("User deleted: id={}", id);
+        });
     }
     private User toEntity(UserCreateRequest request) {
         return new User(
