@@ -33,7 +33,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse create(UserCreateRequest request) {
-        return null;
+        log.debug("Creating user: email={}", request.email());
+        validator.validate(request);
+
+        return txTemplate.execute(session -> {
+            if (userDao.findByEmail(session, request.email().toLowerCase()).isPresent()) {
+                log.warn("Create user failed: email already taken email={}", request.email());
+                throw new ServiceException("Email already taken: " + request.email());
+            }
+
+            User saved = userDao.create(session, toEntity(request));
+            log.info("User created: id={}, email={}", saved.getId(), saved.getEmail());
+            return toResponse(saved);
+        });
     }
 
     @Override
@@ -54,5 +66,22 @@ public class UserServiceImpl implements UserService {
     @Override
     public void delete(Long id) {
 
+    }
+    private User toEntity(UserCreateRequest request) {
+        return new User(
+                request.name(),
+                request.email().toLowerCase(),
+                request.age()
+        );
+    }
+
+    private UserResponse toResponse(User user) {
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getAge(),
+                user.getCreatedAt()
+        );
     }
 }

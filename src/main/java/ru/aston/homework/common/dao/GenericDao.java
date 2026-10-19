@@ -3,12 +3,13 @@ package ru.aston.homework.common.dao;
 import org.hibernate.Session;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface GenericDao<T, ID> {
-
-    void create(Session session, T entity);
-    T getById(Session session, ID id);
+    Optional<T> getById(Session session, ID id);
     List<T> getAll(Session session);
-    void update(Session session, T entity);
+    T update(Session session, T entity);
     void delete(Session session, T entity);
+    void deleteById(Session session, ID id);
+    T create(Session session, T entity);
 }
