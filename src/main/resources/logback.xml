@@ -24,7 +24,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.team.userservice" level="DEBUG"/>
+    <logger name="ru.aston.homework" level="DEBUG"/>
 
     <logger name="org.hibernate.SQL" level="DEBUG"/>
     <logger name="org.hibernate.type.descriptor.sql" level="TRACE"/>
