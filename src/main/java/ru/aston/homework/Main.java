@@ -1,17 +1,24 @@
 package ru.aston.homework;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    static void main() {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        IO.println(String.format("Hello and welcome!"));
+import ru.aston.homework.command.CommandManager;
+import ru.aston.homework.ui.ConsoleInputReader;
+import ru.aston.homework.ui.ConsoleMenu;
+import ru.aston.homework.ui.ConsoleRunner;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            IO.println("i = " + i);
-        }
+public class Main {
+    public static void main(String[] args) {
+        ConsoleInputReader inputReader = new ConsoleInputReader();
+        CommandManager commandManager =
+                ConsoleRunner.createCommandManager(inputReader);
+
+        ConsoleMenu menu = new ConsoleMenu();
+
+        ConsoleRunner runner = new ConsoleRunner(
+                menu,
+                inputReader,
+                commandManager
+        );
+
+        runner.run();
     }
 }
