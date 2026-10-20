@@ -40,3 +40,5 @@ build/
 /.idea/.gitignore
 /.idea/encodings.xml
 /.idea/misc.xml
+/logs/user-service.log
+/.idea/vcs.xml
