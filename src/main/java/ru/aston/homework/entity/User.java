@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
         name = "users",
         check = @CheckConstraint(
                 name = "check_users_age",
-                constraint = "age >= 0"
+                constraint = "age > 0"
         )
 )
 public class User {

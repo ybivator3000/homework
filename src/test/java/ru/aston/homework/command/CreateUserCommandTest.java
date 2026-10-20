@@ -102,7 +102,7 @@ class CreateUserCommandTest {
         String result = output.toString(StandardCharsets.UTF_8);
 
         assertTrue(result.contains("Введите целое число"));
-        assertTrue(result.contains("Возраст должен быть от 0 до 150"));
+        assertTrue(result.contains("Возраст должен быть от 1 до 150 лет"));
         assertTrue(result.contains("Возраст: 21"));
     }
 }

@@ -10,6 +10,5 @@ public interface GenericDao<T, ID> {
     List<T> getAll(Session session);
     T update(Session session, T entity);
     void delete(Session session, T entity);
-    void deleteById(Session session, ID id);
     T create(Session session, T entity);
 }
