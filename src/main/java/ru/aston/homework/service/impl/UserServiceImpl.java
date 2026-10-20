@@ -17,15 +17,18 @@ import java.util.Optional;
 
 public class UserServiceImpl implements UserService {
 
-    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(UserServiceImpl.class);
 
     private final UserDao userDao;
     private final UserValidator validator;
     private final TransactionTemplate txTemplate;
 
-    public UserServiceImpl(UserDao userDao,
-                           UserValidator validator,
-                           TransactionTemplate txTemplate) {
+    public UserServiceImpl(
+            UserDao userDao,
+            UserValidator validator,
+            TransactionTemplate txTemplate
+    ) {
         this.userDao = userDao;
         this.validator = validator;
         this.txTemplate = txTemplate;
@@ -112,6 +115,7 @@ public class UserServiceImpl implements UserService {
             log.info("User deleted: id={}", id);
         });
     }
+
     private User toEntity(UserCreateRequest request) {
         return new User(
                 request.name(),
