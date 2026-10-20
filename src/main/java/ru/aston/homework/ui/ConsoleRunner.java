@@ -9,6 +9,7 @@ import ru.aston.homework.command.ShowAllUsersCommand;
 import ru.aston.homework.command.FindUserCommand;
 import ru.aston.homework.command.UpdateUserCommand;
 import ru.aston.homework.command.DeleteUserCommand;
+import ru.aston.homework.service.UserService;
 
 public class ConsoleRunner {
 
@@ -56,28 +57,50 @@ public class ConsoleRunner {
                 continue;
             }
 
-            if (command == Command.EXIT) {
-                commandManager.execute(command);
-                running = false;
-                continue;
-            }
-
             commandManager.execute(command);
+
+            if (command == Command.EXIT) {
+                running = false;
+            }
         }
 
         log.info("Завершение консольного меню");
     }
 
     public static CommandManager createCommandManager(
-            InputReader inputReader
+            InputReader inputReader,
+            UserService userService
     ) {
         CommandManager manager = new CommandManager();
 
-        manager.register(Command.CREATE, new CreateUserCommand(inputReader));
-        manager.register(Command.SHOW_ALL, new ShowAllUsersCommand());
-        manager.register(Command.FIND_BY_FIELD, new FindUserCommand());
-        manager.register(Command.UPDATE, new UpdateUserCommand());
-        manager.register(Command.DELETE, new DeleteUserCommand());
+        manager.register(
+                Command.CREATE,
+                new CreateUserCommand(inputReader, userService)
+        );
+
+        manager.register(
+                Command.SHOW_ALL,
+                new ShowAllUsersCommand(userService)
+        );
+
+
+        manager.register(
+                Command.FIND_BY_FIELD,
+                new FindUserCommand(inputReader, userService)
+        );
+
+
+        manager.register(
+                Command.UPDATE,
+                new UpdateUserCommand(inputReader, userService)
+        );
+
+
+        manager.register(
+                Command.DELETE,
+                new DeleteUserCommand(inputReader, userService)
+        );
+
         manager.register(Command.EXIT, new ExitCommand());
 
         log.debug("Зарегистрированы команды консольного меню");

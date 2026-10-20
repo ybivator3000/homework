@@ -42,4 +42,32 @@ class ConsoleRunnerTest {
         assertEquals(1, createCalls.get());
         assertEquals(1, exitCalls.get());
     }
+
+    @Test
+    void shouldContinueWhenInputIsNotANumber() {
+        Queue<String> inputs = new ArrayDeque<>();
+        inputs.add("abc");
+        inputs.add("6");
+
+        InputReader inputReader = inputs::remove;
+
+        AtomicInteger exitCalls = new AtomicInteger();
+
+        CommandManager commandManager = new CommandManager();
+        commandManager.register(
+                Command.EXIT,
+                exitCalls::incrementAndGet
+        );
+
+        ConsoleRunner runner = new ConsoleRunner(
+                new ConsoleMenu(),
+                inputReader,
+                commandManager
+        );
+
+        runner.run();
+
+        assertEquals(1, exitCalls.get());
+    }
+
 }

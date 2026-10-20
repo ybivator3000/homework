@@ -35,4 +35,19 @@ class CommandTest {
     void shouldReturnNullWhenNumberIsNegative() {
         assertNull(Command.fromNumber(-1));
     }
+
+    @Test
+    void shouldReturnShowAllWhenNumberIsTwo() {
+        assertEquals(Command.SHOW_ALL, Command.fromNumber(2));
+    }
+
+    @Test
+    void shouldReturnUpdateWhenNumberIsFour() {
+        assertEquals(Command.UPDATE, Command.fromNumber(4));
+    }
+
+    @Test
+    void shouldReturnDeleteWhenNumberIsFive() {
+        assertEquals(Command.DELETE, Command.fromNumber(5));
+    }
 }
