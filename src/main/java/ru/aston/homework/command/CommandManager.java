@@ -24,18 +24,15 @@ public class CommandManager {
         ActionCommand actionCommand = commands.get(command);
 
         if (actionCommand == null) {
-            log.warn("Не удалось выполнить команду: {}. Команда не зарегистрирована", command);
+            log.warn(
+                    "Не удалось выполнить команду: {}. Команда не зарегистрирована",
+                    command
+            );
             System.out.println("Команда пока не реализована.");
             return;
         }
 
         log.info("Выполнение команды: {}", command);
-
-        try {
-            actionCommand.execute();
-        } catch (RuntimeException e) {
-            log.error("Ошибка при выполнении команды: {}", command, e);
-            throw e;
-        }
+        actionCommand.execute();
     }
 }

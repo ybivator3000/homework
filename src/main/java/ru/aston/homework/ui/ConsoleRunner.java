@@ -57,7 +57,14 @@ public class ConsoleRunner {
                 continue;
             }
 
-            commandManager.execute(command);
+            try {
+                commandManager.execute(command);
+            } catch (RuntimeException e) {
+                log.error("Ошибка при выполнении команды: {}", command, e);
+                System.out.println(
+                        "Не удалось выполнить команду. Подробности записаны в лог."
+                );
+            }
 
             if (command == Command.EXIT) {
                 running = false;
@@ -83,18 +90,15 @@ public class ConsoleRunner {
                 new ShowAllUsersCommand(userService)
         );
 
-
         manager.register(
                 Command.FIND_BY_FIELD,
                 new FindUserCommand(inputReader, userService)
         );
 
-
         manager.register(
                 Command.UPDATE,
                 new UpdateUserCommand(inputReader, userService)
         );
-
 
         manager.register(
                 Command.DELETE,

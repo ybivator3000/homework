@@ -22,30 +22,24 @@ public class ShowAllUsersCommand implements ActionCommand {
     public void execute() {
         log.info("Вызвана команда просмотра списка пользователей");
 
-        try {
-            List<UserResponse> users = userService.findAll();
+        List<UserResponse> users = userService.findAll();
 
-            if (users.isEmpty()) {
-                System.out.println("Список пользователей пуст.");
-                return;
-            }
-
-            System.out.println("\n===== СПИСОК ПОЛЬЗОВАТЕЛЕЙ =====");
-
-            for (UserResponse user : users) {
-                System.out.println("ID: " + user.id());
-                System.out.println("Имя: " + user.name());
-                System.out.println("Почта: " + user.email());
-                System.out.println("Возраст: " + user.age());
-                System.out.println("Создан: " + user.createdAt());
-                System.out.println("------------------------------");
-            }
-
-            log.info("Выведено пользователей: {}", users.size());
-
-        } catch (RuntimeException e) {
-            log.error("Не удалось получить список пользователей", e);
-            System.out.println("Не удалось получить список пользователей.");
+        if (users.isEmpty()) {
+            System.out.println("Список пользователей пуст.");
+            return;
         }
+
+        System.out.println("\n===== СПИСОК ПОЛЬЗОВАТЕЛЕЙ =====");
+
+        for (UserResponse user : users) {
+            System.out.println("ID: " + user.id());
+            System.out.println("Имя: " + user.name());
+            System.out.println("Почта: " + user.email());
+            System.out.println("Возраст: " + user.age());
+            System.out.println("Создан: " + user.createdAt());
+            System.out.println("------------------------------");
+        }
+
+        log.info("Выведено пользователей: {}", users.size());
     }
 }

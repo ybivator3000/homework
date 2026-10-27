@@ -5,8 +5,10 @@ import org.slf4j.LoggerFactory;
 import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.exception.ServiceException;
+import ru.aston.homework.exception.ValidationException;
 import ru.aston.homework.service.UserService;
 import ru.aston.homework.ui.InputReader;
+import ru.aston.homework.util.UserValidator;
 
 public class CreateUserCommand implements ActionCommand {
 
@@ -15,6 +17,7 @@ public class CreateUserCommand implements ActionCommand {
 
     private final InputReader inputReader;
     private final UserService userService;
+    private final UserValidator validator;
 
     public CreateUserCommand(
             InputReader inputReader,
@@ -22,6 +25,7 @@ public class CreateUserCommand implements ActionCommand {
     ) {
         this.inputReader = inputReader;
         this.userService = userService;
+        this.validator = new UserValidator();
     }
 
     @Override
@@ -30,58 +34,14 @@ public class CreateUserCommand implements ActionCommand {
 
         System.out.println("\n===== СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ =====");
 
-        String name;
-        String email;
-        int age;
+        String name = readValidName();
+        String email = readValidEmail();
+        int age = readValidAge();
 
-        while (true) {
-            System.out.print("Введите имя: ");
-            name = inputReader.readLine().trim();
-
-            if (!name.isBlank() && name.length() <= 100) {
-                break;
-            }
-
-            System.out.println(
-                    "Имя не должно быть пустым и не должно превышать 100 символов."
-            );
-        }
-
-        while (true) {
-            System.out.print("Введите почту: ");
-            email = inputReader.readLine().trim();
-
-            if (email.length() <= 254
-                    && email.matches(
-                    "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
-            )) {
-                break;
-            }
-
-            System.out.println("Введите корректный адрес электронной почты.");
-        }
-
-        while (true) {
-            System.out.print("Введите возраст: ");
-            String input = inputReader.readLine().trim();
-
-            try {
-                age = Integer.parseInt(input);
-
-                if (age >= 1 && age <= 150) {
-                    break;
-                }
-
-                System.out.println("Возраст должен быть от 1 до 150 лет.");
-            } catch (NumberFormatException e) {
-                System.out.println("Введите целое число.");
-            }
-        }
+        UserCreateRequest request =
+                new UserCreateRequest(name, email, age);
 
         try {
-            UserCreateRequest request =
-                    new UserCreateRequest(name, email, age);
-
             UserResponse createdUser = userService.create(request);
 
             System.out.println("\nПользователь успешно создан!");
@@ -90,14 +50,65 @@ public class CreateUserCommand implements ActionCommand {
             System.out.println("Почта: " + createdUser.email());
             System.out.println("Возраст: " + createdUser.age());
 
-            log.info(
-                    "Пользователь создан: id={}",
-                    createdUser.id()
-            );
+            log.info("Пользователь создан: id={}", createdUser.id());
+
+        } catch (ValidationException e) {
+            System.out.println("Ошибка валидации: " + e.getMessage());
+            log.warn("Ошибка валидации при создании пользователя: {}",
+                    e.getMessage());
 
         } catch (ServiceException e) {
+            System.out.println(
+                    "Не удалось создать пользователя: " + e.getMessage()
+            );
             log.warn("Не удалось создать пользователя: {}", e.getMessage());
-            System.out.println("Не удалось создать пользователя: " + e.getMessage());
         }
     }
+
+    private String readValidName() {
+        while (true) {
+            System.out.print("Введите имя: ");
+            String name = inputReader.readLine().trim();
+
+            try {
+                validator.isValidName(name);
+                return name;
+            } catch (ValidationException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    private String readValidEmail() {
+        while (true) {
+            System.out.print("Введите почту: ");
+            String email = inputReader.readLine().trim();
+
+            try {
+                validator.isValidEmail(email);
+                return email;
+            } catch (ValidationException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+
+    private int readValidAge() {
+        while (true) {
+            System.out.print("Введите возраст: ");
+            String input = inputReader.readLine().trim();
+
+            try {
+                int age = Integer.parseInt(input);
+                validator.isValidAge(age);
+                return age;
+            } catch (NumberFormatException e) {
+                System.out.println("Введите целое число");
+            } catch (ValidationException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
 }

@@ -1,7 +1,7 @@
 package ru.aston.homework.util;
 
 import org.junit.jupiter.api.Test;
-import ru.aston.homework.exception.ServiceException;
+import ru.aston.homework.exception.ValidationException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,32 +16,52 @@ class UserValidatorTest {
 
     @Test
     void shouldRejectEmptyOrBlankName() {
-        assertThrows(ServiceException.class,
-                () -> validator.isValidName(""));
-        assertThrows(ServiceException.class,
-                () -> validator.isValidName("   "));
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidName("")
+        );
+
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidName("   ")
+        );
     }
 
     @Test
     void shouldRejectNullName() {
-        assertThrows(ServiceException.class,
-                () -> validator.isValidName(null));
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidName(null)
+        );
     }
 
     @Test
     void shouldAcceptValidEmail() {
-        assertDoesNotThrow(() -> validator.isValidEmail("ivan@example.com"));
-        assertDoesNotThrow(() -> validator.isValidEmail("ivan.petrov@mail.ru"));
+        assertDoesNotThrow(
+                () -> validator.isValidEmail("ivan@example.com")
+        );
+
+        assertDoesNotThrow(
+                () -> validator.isValidEmail("ivan.petrov@mail.ru")
+        );
     }
 
     @Test
     void shouldRejectInvalidEmail() {
-        assertThrows(ServiceException.class,
-                () -> validator.isValidEmail("abc"));
-        assertThrows(ServiceException.class,
-                () -> validator.isValidEmail("ivan@"));
-        assertThrows(ServiceException.class,
-                () -> validator.isValidEmail("ivan@mail"));
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidEmail("abc")
+        );
+
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidEmail("ivan@")
+        );
+
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidEmail("ivan@mail")
+        );
     }
 
     @Test
@@ -53,11 +73,19 @@ class UserValidatorTest {
 
     @Test
     void shouldRejectAgeOutsideRange() {
-        assertThrows(ServiceException.class,
-                () -> validator.isValidAge(-1));
-        assertThrows(ServiceException.class,
-                () -> validator.isValidAge(0));
-        assertThrows(ServiceException.class,
-                () -> validator.isValidAge(151));
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidAge(-1)
+        );
+
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidAge(0)
+        );
+
+        assertThrows(
+                ValidationException.class,
+                () -> validator.isValidAge(151)
+        );
     }
 }

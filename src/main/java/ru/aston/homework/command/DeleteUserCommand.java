@@ -2,7 +2,6 @@ package ru.aston.homework.command;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.aston.homework.exception.ServiceException;
 import ru.aston.homework.service.UserService;
 import ru.aston.homework.ui.InputReader;
 
@@ -43,19 +42,9 @@ public class DeleteUserCommand implements ActionCommand {
             return;
         }
 
-        try {
-            userService.delete(id);
+        userService.delete(id);
 
-            System.out.println("Пользователь успешно удалён.");
-            log.info("Пользователь удалён: id={}", id);
-
-        } catch (ServiceException e) {
-            log.warn("Не удалось удалить пользователя с ID {}: {}", id, e.getMessage());
-            System.out.println("Не удалось удалить пользователя: " + e.getMessage());
-
-        } catch (RuntimeException e) {
-            log.error("Ошибка при удалении пользователя с ID {}", id, e);
-            System.out.println("Произошла ошибка при удалении пользователя.");
-        }
+        System.out.println("Пользователь успешно удалён.");
+        log.info("Пользователь удалён: id={}", id);
     }
 }
