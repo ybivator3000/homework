@@ -45,28 +45,22 @@ public class FindUserCommand implements ActionCommand {
             return;
         }
 
-        try {
-            Optional<UserResponse> result = userService.findById(id);
+        Optional<UserResponse> result = userService.findById(id);
 
-            if (result.isEmpty()) {
-                System.out.println("Пользователь с ID " + id + " не найден.");
-                return;
-            }
-
-            UserResponse user = result.get();
-
-            System.out.println("\n===== НАЙДЕННЫЙ ПОЛЬЗОВАТЕЛЬ =====");
-            System.out.println("ID: " + user.id());
-            System.out.println("Имя: " + user.name());
-            System.out.println("Почта: " + user.email());
-            System.out.println("Возраст: " + user.age());
-            System.out.println("Создан: " + user.createdAt());
-
-            log.info("Пользователь найден: id={}", id);
-
-        } catch (RuntimeException e) {
-            log.error("Ошибка поиска пользователя: id={}", id, e);
-            System.out.println("Не удалось выполнить поиск пользователя.");
+        if (result.isEmpty()) {
+            System.out.println("Пользователь с ID " + id + " не найден.");
+            return;
         }
+
+        UserResponse user = result.get();
+
+        System.out.println("\n===== НАЙДЕННЫЙ ПОЛЬЗОВАТЕЛЬ =====");
+        System.out.println("ID: " + user.id());
+        System.out.println("Имя: " + user.name());
+        System.out.println("Почта: " + user.email());
+        System.out.println("Возраст: " + user.age());
+        System.out.println("Создан: " + user.createdAt());
+
+        log.info("Пользователь найден: id={}", id);
     }
 }

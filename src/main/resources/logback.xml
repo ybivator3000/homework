@@ -29,10 +29,11 @@
         </encoder>
     </appender>
 
-    <logger name="ru.aston.homework" level="DEBUG"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
-    <logger name="org.hibernate.type.descriptor.sql" level="TRACE"/>
-    <logger name="org.hibernate.orm.jdbc.bind" level="TRACE"/>
+    <logger name="ru.aston.homework" level="INFO"/>
+
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.hibernate.orm.jdbc.bind" level="WARN"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
