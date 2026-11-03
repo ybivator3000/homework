@@ -7,8 +7,8 @@ import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.exception.ServiceException;
 import ru.aston.homework.exception.ValidationException;
 import ru.aston.homework.service.UserService;
+import ru.aston.homework.ui.ConsoleFieldValidator;
 import ru.aston.homework.ui.InputReader;
-import ru.aston.homework.util.UserValidator;
 
 public class UpdateUserCommand implements ActionCommand {
 
@@ -17,15 +17,16 @@ public class UpdateUserCommand implements ActionCommand {
 
     private final InputReader inputReader;
     private final UserService userService;
-    private final UserValidator validator;
+    private final ConsoleFieldValidator fieldValidator;
 
     public UpdateUserCommand(
             InputReader inputReader,
-            UserService userService
+            UserService userService,
+            ConsoleFieldValidator fieldValidator
     ) {
         this.inputReader = inputReader;
         this.userService = userService;
-        this.validator = new UserValidator();
+        this.fieldValidator = fieldValidator;
     }
 
     @Override
@@ -84,7 +85,7 @@ public class UpdateUserCommand implements ActionCommand {
             String name = inputReader.readLine().trim();
 
             try {
-                validator.isValidName(name);
+                fieldValidator.validate(UserUpdateRequest.class, "name", name);
                 return name;
             } catch (ValidationException e) {
                 System.out.println(e.getMessage());
@@ -98,7 +99,7 @@ public class UpdateUserCommand implements ActionCommand {
             String email = inputReader.readLine().trim();
 
             try {
-                validator.isValidEmail(email);
+                fieldValidator.validate(UserUpdateRequest.class, "email", email);
                 return email;
             } catch (ValidationException e) {
                 System.out.println(e.getMessage());
@@ -113,7 +114,7 @@ public class UpdateUserCommand implements ActionCommand {
 
             try {
                 int age = Integer.parseInt(input);
-                validator.isValidAge(age);
+                fieldValidator.validate(UserUpdateRequest.class, "age", age);
                 return age;
             } catch (NumberFormatException e) {
                 System.out.println("Возраст должен быть целым числом.");

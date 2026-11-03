@@ -1,77 +1,45 @@
 package ru.aston.homework.service.impl;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.hibernate.Session;
-
-import ru.aston.homework.dao.user.UserDao;
-import ru.aston.homework.config.TransactionTemplate;
+import org.springframework.dao.DataAccessResourceFailureException;
 import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.entity.User;
-import ru.aston.homework.exception.DaoException;
-import ru.aston.homework.exception.ServiceException;
-import ru.aston.homework.util.UserValidator;
+import ru.aston.homework.exception.EmailAlreadyTakenException;
+import ru.aston.homework.exception.UserNotFoundException;
+import ru.aston.homework.repository.UserRepository;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
 
-    @Mock private UserDao userDao;
-    @Mock private UserValidator validator;
-    @Mock private TransactionTemplate txTemplate;
-    @Mock private Session session;
+    @Mock
+    private UserRepository userRepository;
 
-    @InjectMocks private UserServiceImpl service;
-
-    @BeforeEach
-    void stubTransactionTemplate() {
-        lenient().when(txTemplate.execute(any())).thenAnswer(inv -> {
-            Function<Session, ?> fn = inv.getArgument(0);
-            return fn.apply(session);
-        });
-        lenient().when(txTemplate.executeReadOnly(any())).thenAnswer(inv -> {
-            Function<Session, ?> fn = inv.getArgument(0);
-            return fn.apply(session);
-        });
-        lenient().doAnswer(inv -> {
-            Consumer<Session> fn = inv.getArgument(0);
-            fn.accept(session);
-            return null;
-        }).when(txTemplate).executeVoid(any());
-    }
+    @InjectMocks
+    private UserServiceImpl service;
 
     @Test
     void create_validRequest_returnsResponse() {
         var request = new UserCreateRequest("Ivan", "Ivan@Example.COM", 25);
         var savedUser = user(1L, "Ivan", "ivan@example.com", 25);
 
-        when(userDao.findByEmail(session, "ivan@example.com")).thenReturn(Optional.empty());
-        when(userDao.create(eq(session), any(User.class))).thenReturn(savedUser);
+        when(userRepository.findByEmailIgnoreCase("Ivan@Example.COM")).thenReturn(Optional.empty());
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
 
         UserResponse response = service.create(request);
 
@@ -80,49 +48,33 @@ class UserServiceImplTest {
         assertThat(response.email()).isEqualTo("ivan@example.com");
         assertThat(response.age()).isEqualTo(25);
 
-        verify(validator).validate(request);
-        verify(userDao).findByEmail(session, "ivan@example.com");
+        verify(userRepository).findByEmailIgnoreCase("Ivan@Example.COM");
 
         ArgumentCaptor<User> captured = ArgumentCaptor.forClass(User.class);
-        verify(userDao).create(eq(session), captured.capture());
+        verify(userRepository).saveAndFlush(captured.capture());
         assertThat(captured.getValue().getEmail()).isEqualTo("ivan@example.com");
     }
 
     @Test
     void create_emailTaken_throwsServiceException() {
         var request = new UserCreateRequest("Ivan", "ivan@example.com", 25);
-        when(userDao.findByEmail(session, "ivan@example.com"))
+        when(userRepository.findByEmailIgnoreCase("ivan@example.com"))
                 .thenReturn(Optional.of(user(2L, "Other", "ivan@example.com", 30)));
 
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("Email already taken")
-                .hasMessageContaining("ivan@example.com");
+        assertThatThrownBy(() -> service.create(request)).isInstanceOf(EmailAlreadyTakenException.class)
+                .hasMessageContaining("Электронная почта ivan@example.com уже занята");
 
-        verify(userDao, never()).create(any(), any());
+        verify(userRepository, never()).saveAndFlush(any(User.class));
     }
 
     @Test
-    void create_validatorThrows_propagatesAndSkipsDao() {
-        var request = new UserCreateRequest("", "ivan@example.com", 25);
-        doThrow(new ServiceException("Name must not be blank"))
-                .when(validator).validate(request);
-
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("Name must not be blank");
-        verifyNoInteractions(txTemplate, userDao);
-    }
-
-    @Test
-    void create_daoThrows_propagates() {
+    void create_repositoryThrows_propagates() {
         var request = new UserCreateRequest("Ivan", "ivan@example.com", 25);
-        when(userDao.findByEmail(session, "ivan@example.com")).thenReturn(Optional.empty());
-        when(userDao.create(any(), any())).thenThrow(new DaoException("DB down"));
+        when(userRepository.findByEmailIgnoreCase("ivan@example.com")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(request))
-                .isInstanceOf(DaoException.class)
-                .hasMessageContaining("DB down");
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(new DataAccessResourceFailureException("DB down"));
+
+        assertThatThrownBy(() -> service.create(request)).isInstanceOf(DataAccessResourceFailureException.class);
     }
 
     @Test
@@ -130,13 +82,15 @@ class UserServiceImplTest {
         var request = new UserUpdateRequest(1L, "Ivan Updated", "ivan@example.com", 30);
         var existing = user(1L, "Ivan", "ivan@example.com", 25);
 
-        when(userDao.getById(session, 1L)).thenReturn(Optional.of(existing));
-        when(userDao.update(eq(session), any(User.class))).thenAnswer(inv -> inv.getArgument(1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
 
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         UserResponse response = service.update(request);
 
         assertThat(response.name()).isEqualTo("Ivan Updated");
         assertThat(response.age()).isEqualTo(30);
+
+        verify(userRepository).saveAndFlush(existing);
     }
 
     @Test
@@ -145,12 +99,12 @@ class UserServiceImplTest {
         var existing = user(1L, "Ivan", "ivan@example.com", 25);
         var other = user(2L, "Other", "taken@example.com", 30);
 
-        when(userDao.getById(session, 1L)).thenReturn(Optional.of(existing));
-        when(userDao.findByEmail(session, "taken@example.com")).thenReturn(Optional.of(other));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.update(request))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("Email already taken");
+        when(userRepository.findByEmailIgnoreCase("taken@example.com")).thenReturn(Optional.of(other));
+
+        assertThatThrownBy(() -> service.update(request)).isInstanceOf(EmailAlreadyTakenException.class)
+                .hasMessageContaining("Электронная почта taken@example.com уже занята");
     }
 
     @Test
@@ -158,31 +112,35 @@ class UserServiceImplTest {
         var request = new UserUpdateRequest(1L, "Ivan Updated", "IVAN@EXAMPLE.COM", 30);
         var existing = user(1L, "Ivan", "ivan@example.com", 25);
 
-        when(userDao.getById(session, 1L)).thenReturn(Optional.of(existing));
-        when(userDao.update(eq(session), any(User.class))).thenAnswer(inv -> inv.getArgument(1));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThatNoException().isThrownBy(() -> service.update(request));
 
-        verify(userDao, never()).findByEmail(any(), any());
+        verify(userRepository, never()).findByEmailIgnoreCase(any(String.class));
+
+        verify(userRepository).saveAndFlush(existing);
+
+        assertThat(existing.getEmail()).isEqualTo("ivan@example.com");
     }
 
     @Test
     void update_notFound_throwsServiceException() {
         var request = new UserUpdateRequest(99L, "Ivan", "ivan@example.com", 25);
-        when(userDao.getById(session, 99L)).thenReturn(Optional.empty());
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(request))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("User not found")
-                .hasMessageContaining("99");
+        assertThatThrownBy(() -> service.update(request)).isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("Пользователь с ID 99 не найден");
 
-        verify(userDao, never()).update(any(), any());
+        verify(userRepository, never()).saveAndFlush(any(User.class));
     }
 
     @Test
     void findById_found_returnsResponse() {
-        when(userDao.getById(session, 1L))
-                .thenReturn(Optional.of(user(1L, "Ivan", "a@b.com", 25)));
+        var existing = user(1L, "Ivan", "a@b.com", 25);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
 
         Optional<UserResponse> result = service.findById(1L);
 
@@ -193,49 +151,65 @@ class UserServiceImplTest {
 
     @Test
     void findById_notFound_returnsEmpty() {
-        when(userDao.getById(session, 99L)).thenReturn(Optional.empty());
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThat(service.findById(99L)).isEmpty();
+        Optional<UserResponse> result = service.findById(99L);
+
+        assertThat(result).isEmpty();
+
+        verify(userRepository).findById(99L);
     }
 
     @Test
     void findAll_returnsAllUsers() {
-        when(userDao.getAll(session)).thenReturn(List.of(
+        List<User> users = List.of(
                 user(1L, "A", "a@b.com", 20),
                 user(2L, "B", "b@b.com", 30)
-        ));
+        );
+
+        when(userRepository.findAll()).thenReturn(users);
 
         List<UserResponse> result = service.findAll();
 
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(UserResponse::name).containsExactly("A", "B");
+        assertThat(result)
+                .extracting(UserResponse::name)
+                .containsExactly("A", "B");
+
+        verify(userRepository).findAll();
     }
 
     @Test
     void findAll_empty_returnsEmptyList() {
-        when(userDao.getAll(session)).thenReturn(List.of());
+        when(userRepository.findAll()).thenReturn(List.of());
 
-        assertThat(service.findAll()).isEmpty();
+        List<UserResponse> result = service.findAll();
+
+        assertThat(result).isEmpty();
+
+        verify(userRepository).findAll();
     }
+
     @Test
     void delete_existingUser_deletesUser() {
         var existing = user(1L, "Ivan", "a@b.com", 25);
-        when(userDao.getById(session, 1L)).thenReturn(Optional.of(existing));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
 
         service.delete(1L);
 
-        verify(userDao).delete(session, existing);
+        verify(userRepository).findById(1L);
+        verify(userRepository).delete(existing);
     }
 
     @Test
     void delete_notFound_throwsServiceException() {
-        when(userDao.getById(session, 99L)).thenReturn(Optional.empty());
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.delete(99L))
-                .isInstanceOf(ServiceException.class)
-                .hasMessageContaining("User not found");
+        assertThatThrownBy(() -> service.delete(99L)).isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("Пользователь с ID 99 не найден");
 
-        verify(userDao, never()).delete(any(), any());
+        verify(userRepository).findById(99L);
+        verify(userRepository, never()).delete(any(User.class));
     }
 
     private static User user(Long id, String name, String email, int age) {

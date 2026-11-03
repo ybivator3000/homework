@@ -2,13 +2,7 @@ package ru.aston.homework.ui;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.aston.homework.command.CommandManager;
-import ru.aston.homework.command.CreateUserCommand;
-import ru.aston.homework.command.ExitCommand;
-import ru.aston.homework.command.ShowAllUsersCommand;
-import ru.aston.homework.command.FindUserCommand;
-import ru.aston.homework.command.UpdateUserCommand;
-import ru.aston.homework.command.DeleteUserCommand;
+import ru.aston.homework.command.*;
 import ru.aston.homework.service.UserService;
 
 public class ConsoleRunner {
@@ -76,13 +70,14 @@ public class ConsoleRunner {
 
     public static CommandManager createCommandManager(
             InputReader inputReader,
-            UserService userService
+            UserService userService,
+            ConsoleFieldValidator fieldValidator
     ) {
         CommandManager manager = new CommandManager();
 
         manager.register(
                 Command.CREATE,
-                new CreateUserCommand(inputReader, userService)
+                new CreateUserCommand(inputReader, userService, fieldValidator)
         );
 
         manager.register(
@@ -97,7 +92,7 @@ public class ConsoleRunner {
 
         manager.register(
                 Command.UPDATE,
-                new UpdateUserCommand(inputReader, userService)
+                new UpdateUserCommand(inputReader, userService, fieldValidator)
         );
 
         manager.register(

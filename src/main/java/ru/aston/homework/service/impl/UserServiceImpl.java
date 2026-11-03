@@ -1,125 +1,145 @@
 package ru.aston.homework.service.impl;
 
-import ru.aston.homework.config.TransactionTemplate;
-import ru.aston.homework.dao.user.UserDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.entity.User;
-import ru.aston.homework.exception.ServiceException;
+import ru.aston.homework.exception.EmailAlreadyTakenException;
+import ru.aston.homework.exception.UserNotFoundException;
+import ru.aston.homework.repository.UserRepository;
 import ru.aston.homework.service.UserService;
-import ru.aston.homework.util.UserValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
+@Service
+@Validated
 public class UserServiceImpl implements UserService {
 
     private static final Logger log =
             LoggerFactory.getLogger(UserServiceImpl.class);
 
-    private final UserDao userDao;
-    private final UserValidator validator;
-    private final TransactionTemplate txTemplate;
+    private final UserRepository userRepository;
 
     public UserServiceImpl(
-            UserDao userDao,
-            UserValidator validator,
-            TransactionTemplate txTemplate
+            UserRepository userRepository
     ) {
-        this.userDao = userDao;
-        this.validator = validator;
-        this.txTemplate = txTemplate;
+        this.userRepository = userRepository;
     }
 
     @Override
+    @Transactional
     public UserResponse create(UserCreateRequest request) {
         log.debug("Creating user: email={}", request.email());
-        validator.validate(request);
 
-        return txTemplate.execute(session -> {
-            if (userDao.findByEmail(session, request.email().toLowerCase()).isPresent()) {
-                log.warn("Create user failed: email already taken email={}", request.email());
-                throw new ServiceException("Email already taken: " + request.email());
-            }
+        if (userRepository
+                .findByEmailIgnoreCase(request.email())
+                .isPresent()) {
+            log.warn("Create user failed: email already taken email={}", request.email());
+            throw new EmailAlreadyTakenException(request.email());
+        }
 
-            User saved = userDao.create(session, toEntity(request));
-            log.info("User created: id={}, email={}", saved.getId(), saved.getEmail());
-            return toResponse(saved);
-        });
+        User saved = userRepository.saveAndFlush(toEntity(request));
+
+        log.info("User created: id={}, email={}", saved.getId(), saved.getEmail());
+
+        return toResponse(saved);
     }
 
     @Override
+    @Transactional
     public UserResponse update(UserUpdateRequest request) {
         log.debug("Updating user: id={}", request.id());
-        validator.validate(request);
 
-        return txTemplate.execute(session -> {
-            User user = userDao.getById(session, request.id())
-                    .orElseThrow(() -> {
-                        log.warn("Update user failed: not found id={}", request.id());
-                        return new ServiceException("User not found: id=" + request.id());
-                    });
-
-            if (!user.getEmail().equalsIgnoreCase(request.email())) {
-                userDao.findByEmail(session, request.email().toLowerCase()).ifPresent(other -> {
-                    if (!other.getId().equals(user.getId())) {
-                        log.warn("Update user failed: email taken email={}", request.email());
-                        throw new ServiceException("Email already taken: " + request.email());
-                    }
+        User user = userRepository
+                .findById(request.id())
+                .orElseThrow(() -> {
+                    log.warn("Update user failed: not found id={}", request.id());
+                    return new UserNotFoundException(request.id());
                 });
-            }
 
-            user.setName(request.name());
-            user.setEmail(request.email().toLowerCase());
-            user.setAge(request.age());
+        if (!user
+                .getEmail()
+                .equalsIgnoreCase(request.email())) {
+            userRepository
+                    .findByEmailIgnoreCase(request.email())
+                    .ifPresent(other -> {
+                        if (!other
+                                .getId()
+                                .equals(user.getId())) {
+                            log.warn("Update user failed: email taken email={}", request.email());
+                            throw new EmailAlreadyTakenException(request.email());
+                        }
+                    });
+        }
 
-            User updated = userDao.update(session, user);
-            log.info("User updated: id={}, email={}", updated.getId(), updated.getEmail());
-            return toResponse(updated);
-        });
+        user.setName(request.name());
+        user.setEmail(request
+                .email()
+                .toLowerCase(Locale.ROOT));
+        user.setAge(request.age());
+
+        User updated = userRepository.saveAndFlush(user);
+
+        log.info("User updated: id={}, email={}",
+                updated.getId(), updated.getEmail());
+
+        return toResponse(updated);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<UserResponse> findById(Long id) {
         log.debug("Finding user: id={}", id);
-        return txTemplate.executeReadOnly(session ->
-                userDao.getById(session, id).map(this::toResponse)
-        );
+
+        return userRepository
+                .findById(id)
+                .map(this::toResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserResponse> findAll() {
         log.debug("Finding all users");
-        return txTemplate.executeReadOnly(session -> {
-            List<UserResponse> users = userDao.getAll(session).stream()
-                    .map(this::toResponse)
-                    .toList();
-            log.debug("Found {} users", users.size());
-            return users;
-        });
+
+        List<UserResponse> users = userRepository
+                .findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+
+        log.debug("Found {} users", users.size());
+
+        return users;
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         log.debug("Deleting user: id={}", id);
-        txTemplate.executeVoid(session -> {
-            User user = userDao.getById(session, id)
-                    .orElseThrow(() -> {
-                        log.warn("Delete user failed: not found id={}", id);
-                        return new ServiceException("User not found: id=" + id);
-                    });
-            userDao.delete(session, user);
-            log.info("User deleted: id={}", id);
-        });
+
+        User user = userRepository
+                .findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Delete user failed: not found id={}", id);
+                    return new UserNotFoundException(id);
+                });
+
+        userRepository.delete(user);
+
+        log.info("User deleted: id={}", id);
     }
 
     private User toEntity(UserCreateRequest request) {
         return new User(
                 request.name(),
-                request.email().toLowerCase(),
+                request.email().toLowerCase(Locale.ROOT),
                 request.age()
         );
     }

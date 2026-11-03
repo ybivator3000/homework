@@ -1,5 +1,7 @@
 package ru.aston.homework.command;
 
+import jakarta.validation.Validation;
+import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,6 +9,7 @@ import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.service.UserService;
+import ru.aston.homework.ui.ConsoleFieldValidator;
 import ru.aston.homework.ui.InputReader;
 
 import java.io.ByteArrayOutputStream;
@@ -24,16 +27,19 @@ class CreateUserCommandTest {
 
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private PrintStream originalOut;
+    private ValidatorFactory validatorFactory;
 
     @BeforeEach
     void setUp() {
         originalOut = System.out;
         System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+        validatorFactory = Validation.buildDefaultValidatorFactory();
     }
 
     @AfterEach
     void tearDown() {
         System.setOut(originalOut);
+        validatorFactory.close();
     }
 
     private CreateUserCommand createCommand(String... inputs) {
@@ -73,7 +79,9 @@ class CreateUserCommandTest {
             }
         };
 
-        return new CreateUserCommand(inputReader, userService);
+        ConsoleFieldValidator fieldValidator = new ConsoleFieldValidator(validatorFactory.getValidator());
+
+        return new CreateUserCommand(inputReader, userService, fieldValidator);
     }
 
     @Test

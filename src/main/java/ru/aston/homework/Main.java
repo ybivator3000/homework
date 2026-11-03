@@ -1,17 +1,17 @@
 package ru.aston.homework;
 
+import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.context.ConfigurableApplicationContext;
 import ru.aston.homework.command.CommandManager;
-import ru.aston.homework.config.HibernateUtil;
-import ru.aston.homework.config.TransactionTemplate;
-import ru.aston.homework.dao.user.UserDaoImpl;
 import ru.aston.homework.service.UserService;
-import ru.aston.homework.service.impl.UserServiceImpl;
+import ru.aston.homework.ui.ConsoleFieldValidator;
 import ru.aston.homework.ui.ConsoleInputReader;
 import ru.aston.homework.ui.ConsoleMenu;
 import ru.aston.homework.ui.ConsoleRunner;
-import ru.aston.homework.util.UserValidator;
 
 public class Main {
 
@@ -21,17 +21,20 @@ public class Main {
     public static void main(String[] args) {
         log.info("Starting user-service");
 
-        try {
+        SpringApplication application = new SpringApplication(JpaProbeApplication.class);
+
+        application.setWebApplicationType(WebApplicationType.NONE);
+
+        try (ConfigurableApplicationContext context = application.run(args)) {
             ConsoleInputReader inputReader = new ConsoleInputReader();
 
-            UserService userService = new UserServiceImpl(
-                    new UserDaoImpl(),
-                    new UserValidator(),
-                    new TransactionTemplate()
-            );
+            UserService userService = context.getBean(UserService.class);
+
+            Validator validator = context.getBean(Validator.class);
+            ConsoleFieldValidator fieldValidator = new ConsoleFieldValidator(validator);
 
             CommandManager commandManager =
-                    ConsoleRunner.createCommandManager(inputReader, userService);
+                    ConsoleRunner.createCommandManager(inputReader, userService, fieldValidator);
 
             ConsoleMenu menu = new ConsoleMenu();
 
@@ -53,12 +56,6 @@ public class Main {
                     "Произошла ошибка при работе приложения. Подробности записаны в лог."
             );
         } finally {
-            try {
-                HibernateUtil.shutdown();
-            } catch (Exception e) {
-                log.error("Error while shutting down Hibernate", e);
-            }
-
             log.info("user-service stopped");
         }
     }
