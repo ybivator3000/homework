@@ -7,8 +7,8 @@ import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.exception.ServiceException;
 import ru.aston.homework.exception.ValidationException;
 import ru.aston.homework.service.UserService;
+import ru.aston.homework.ui.ConsoleFieldValidator;
 import ru.aston.homework.ui.InputReader;
-import ru.aston.homework.util.UserValidator;
 
 public class CreateUserCommand implements ActionCommand {
 
@@ -17,15 +17,16 @@ public class CreateUserCommand implements ActionCommand {
 
     private final InputReader inputReader;
     private final UserService userService;
-    private final UserValidator validator;
+    private final ConsoleFieldValidator fieldValidator;
 
     public CreateUserCommand(
             InputReader inputReader,
-            UserService userService
+            UserService userService,
+            ConsoleFieldValidator fieldValidator
     ) {
         this.inputReader = inputReader;
         this.userService = userService;
-        this.validator = new UserValidator();
+        this.fieldValidator = fieldValidator;
     }
 
     @Override
@@ -71,7 +72,7 @@ public class CreateUserCommand implements ActionCommand {
             String name = inputReader.readLine().trim();
 
             try {
-                validator.isValidName(name);
+                fieldValidator.validate(UserCreateRequest.class, "name", name);
                 return name;
             } catch (ValidationException e) {
                 System.out.println(e.getMessage());
@@ -85,7 +86,7 @@ public class CreateUserCommand implements ActionCommand {
             String email = inputReader.readLine().trim();
 
             try {
-                validator.isValidEmail(email);
+                fieldValidator.validate(UserCreateRequest.class, "email", email);
                 return email;
             } catch (ValidationException e) {
                 System.out.println(e.getMessage());
@@ -101,7 +102,7 @@ public class CreateUserCommand implements ActionCommand {
 
             try {
                 int age = Integer.parseInt(input);
-                validator.isValidAge(age);
+                fieldValidator.validate(UserCreateRequest.class, "age", age);
                 return age;
             } catch (NumberFormatException e) {
                 System.out.println("Введите целое число");

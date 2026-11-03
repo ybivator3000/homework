@@ -1,5 +1,6 @@
 package ru.aston.homework;
 
+import jakarta.validation.Validator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -7,6 +8,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.context.ConfigurableApplicationContext;
 import ru.aston.homework.command.CommandManager;
 import ru.aston.homework.service.UserService;
+import ru.aston.homework.ui.ConsoleFieldValidator;
 import ru.aston.homework.ui.ConsoleInputReader;
 import ru.aston.homework.ui.ConsoleMenu;
 import ru.aston.homework.ui.ConsoleRunner;
@@ -23,13 +25,16 @@ public class Main {
 
         application.setWebApplicationType(WebApplicationType.NONE);
 
-        try(ConfigurableApplicationContext context = application.run(args)) {
+        try (ConfigurableApplicationContext context = application.run(args)) {
             ConsoleInputReader inputReader = new ConsoleInputReader();
 
             UserService userService = context.getBean(UserService.class);
 
+            Validator validator = context.getBean(Validator.class);
+            ConsoleFieldValidator fieldValidator = new ConsoleFieldValidator(validator);
+
             CommandManager commandManager =
-                    ConsoleRunner.createCommandManager(inputReader, userService);
+                    ConsoleRunner.createCommandManager(inputReader, userService, fieldValidator);
 
             ConsoleMenu menu = new ConsoleMenu();
 
