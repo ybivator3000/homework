@@ -2,6 +2,7 @@ package ru.aston.homework.command;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.aston.homework.exception.UserNotFoundException;
 import ru.aston.homework.service.UserService;
 import ru.aston.homework.ui.InputReader;
 
@@ -42,9 +43,14 @@ public class DeleteUserCommand implements ActionCommand {
             return;
         }
 
-        userService.delete(id);
+        try {
+            userService.delete(id);
 
-        System.out.println("Пользователь успешно удалён.");
-        log.info("Пользователь удалён: id={}", id);
+            System.out.println("Пользователь успешно удалён.");
+            log.info("Пользователь удалён: id={}", id);
+        } catch (UserNotFoundException e) {
+            System.out.println(e.getMessage());
+            log.warn("Пользователь не найден: id={}", id);
+        }
     }
 }
