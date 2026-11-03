@@ -8,6 +8,7 @@ import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
 import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.exception.RequestIdMismatchException;
+import ru.aston.homework.exception.UserNotFoundException;
 import ru.aston.homework.service.UserService;
 
 import java.util.List;
@@ -28,7 +29,8 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
-        return userService.findById(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        UserResponse user = userService.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        return ResponseEntity.ok(user);
     }
 
     @PostMapping
