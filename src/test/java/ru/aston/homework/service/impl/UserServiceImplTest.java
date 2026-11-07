@@ -6,6 +6,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessResourceFailureException;
 import ru.aston.homework.dto.UserCreateRequest;
 import ru.aston.homework.dto.UserResponse;
@@ -13,6 +14,7 @@ import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.entity.User;
 import ru.aston.homework.exception.EmailAlreadyTakenException;
 import ru.aston.homework.exception.UserNotFoundException;
+import ru.aston.homework.kafka.dto.UserEvent;
 import ru.aston.homework.repository.UserRepository;
 
 import java.lang.reflect.Field;
@@ -30,6 +32,9 @@ class UserServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private UserServiceImpl service;
 
@@ -38,8 +43,10 @@ class UserServiceImplTest {
         var request = new UserCreateRequest("Ivan", "Ivan@Example.COM", 25);
         var savedUser = user(1L, "Ivan", "ivan@example.com", 25);
 
-        when(userRepository.findByEmailIgnoreCase("Ivan@Example.COM")).thenReturn(Optional.empty());
-        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
+        when(userRepository.findByEmailIgnoreCase("Ivan@Example.COM"))
+                .thenReturn(Optional.empty());
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenReturn(savedUser);
 
         UserResponse response = service.create(request);
 
@@ -53,28 +60,47 @@ class UserServiceImplTest {
         ArgumentCaptor<User> captured = ArgumentCaptor.forClass(User.class);
         verify(userRepository).saveAndFlush(captured.capture());
         assertThat(captured.getValue().getEmail()).isEqualTo("ivan@example.com");
+
+        ArgumentCaptor<UserEvent> eventCaptor =
+                ArgumentCaptor.forClass(UserEvent.class);
+
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        assertThat(eventCaptor.getValue().email())
+                .isEqualTo("ivan@example.com");
+        assertThat(eventCaptor.getValue().operation())
+                .isEqualTo(UserEvent.Operation.CREATE);
     }
 
     @Test
     void create_emailTaken_throwsServiceException() {
         var request = new UserCreateRequest("Ivan", "ivan@example.com", 25);
+
         when(userRepository.findByEmailIgnoreCase("ivan@example.com"))
                 .thenReturn(Optional.of(user(2L, "Other", "ivan@example.com", 30)));
 
-        assertThatThrownBy(() -> service.create(request)).isInstanceOf(EmailAlreadyTakenException.class)
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(EmailAlreadyTakenException.class)
                 .hasMessageContaining("Электронная почта ivan@example.com уже занята");
 
         verify(userRepository, never()).saveAndFlush(any(User.class));
+        verify(eventPublisher, never()).publishEvent(any(UserEvent.class));
     }
 
     @Test
     void create_repositoryThrows_propagates() {
         var request = new UserCreateRequest("Ivan", "ivan@example.com", 25);
-        when(userRepository.findByEmailIgnoreCase("ivan@example.com")).thenReturn(Optional.empty());
 
-        when(userRepository.saveAndFlush(any(User.class))).thenThrow(new DataAccessResourceFailureException("DB down"));
+        when(userRepository.findByEmailIgnoreCase("ivan@example.com"))
+                .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create(request)).isInstanceOf(DataAccessResourceFailureException.class);
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenThrow(new DataAccessResourceFailureException("DB down"));
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(DataAccessResourceFailureException.class);
+
+        verify(eventPublisher, never()).publishEvent(any(UserEvent.class));
     }
 
     @Test
@@ -83,14 +109,16 @@ class UserServiceImplTest {
         var existing = user(1L, "Ivan", "ivan@example.com", 25);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
 
-        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         UserResponse response = service.update(request);
 
         assertThat(response.name()).isEqualTo("Ivan Updated");
         assertThat(response.age()).isEqualTo(30);
 
         verify(userRepository).saveAndFlush(existing);
+        verify(eventPublisher, never()).publishEvent(any(UserEvent.class));
     }
 
     @Test
@@ -100,10 +128,11 @@ class UserServiceImplTest {
         var other = user(2L, "Other", "taken@example.com", 30);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(userRepository.findByEmailIgnoreCase("taken@example.com"))
+                .thenReturn(Optional.of(other));
 
-        when(userRepository.findByEmailIgnoreCase("taken@example.com")).thenReturn(Optional.of(other));
-
-        assertThatThrownBy(() -> service.update(request)).isInstanceOf(EmailAlreadyTakenException.class)
+        assertThatThrownBy(() -> service.update(request))
+                .isInstanceOf(EmailAlreadyTakenException.class)
                 .hasMessageContaining("Электронная почта taken@example.com уже занята");
     }
 
@@ -113,13 +142,12 @@ class UserServiceImplTest {
         var existing = user(1L, "Ivan", "ivan@example.com", 25);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
-
-        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
 
         assertThatNoException().isThrownBy(() -> service.update(request));
 
         verify(userRepository, never()).findByEmailIgnoreCase(any(String.class));
-
         verify(userRepository).saveAndFlush(existing);
 
         assertThat(existing.getEmail()).isEqualTo("ivan@example.com");
@@ -128,9 +156,11 @@ class UserServiceImplTest {
     @Test
     void update_notFound_throwsServiceException() {
         var request = new UserUpdateRequest(99L, "Ivan", "ivan@example.com", 25);
+
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update(request)).isInstanceOf(UserNotFoundException.class)
+        assertThatThrownBy(() -> service.update(request))
+                .isInstanceOf(UserNotFoundException.class)
                 .hasMessageContaining("Пользователь с ID 99 не найден");
 
         verify(userRepository, never()).saveAndFlush(any(User.class));
@@ -193,23 +223,35 @@ class UserServiceImplTest {
     @Test
     void delete_existingUser_deletesUser() {
         var existing = user(1L, "Ivan", "a@b.com", 25);
+
         when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
 
         service.delete(1L);
 
         verify(userRepository).findById(1L);
         verify(userRepository).delete(existing);
+
+        ArgumentCaptor<UserEvent> eventCaptor =
+                ArgumentCaptor.forClass(UserEvent.class);
+
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+        assertThat(eventCaptor.getValue().email()).isEqualTo("a@b.com");
+        assertThat(eventCaptor.getValue().operation())
+                .isEqualTo(UserEvent.Operation.DELETE);
     }
 
     @Test
     void delete_notFound_throwsServiceException() {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.delete(99L)).isInstanceOf(UserNotFoundException.class)
+        assertThatThrownBy(() -> service.delete(99L))
+                .isInstanceOf(UserNotFoundException.class)
                 .hasMessageContaining("Пользователь с ID 99 не найден");
 
         verify(userRepository).findById(99L);
         verify(userRepository, never()).delete(any(User.class));
+        verify(eventPublisher, never()).publishEvent(any(UserEvent.class));
     }
 
     private static User user(Long id, String name, String email, int age) {
