@@ -158,7 +158,7 @@
 
 ### Конфигурация Hibernate
 
-Файл `src/main/resources/hibernate.cfg.xml` содержит настройки Hibernate.
+Файл `user-service/src/main/resources/hibernate.cfg.xml` содержит настройки Hibernate.
 
 Класс `ru.aston.homework.config.HibernateUtil` отвечает за создание `SessionFactory` и получение параметров подключения из переменных окружения.
 

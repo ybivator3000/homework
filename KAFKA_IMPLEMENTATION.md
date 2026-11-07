@@ -6,20 +6,47 @@
 
 `user-service` выступает в роли Producer и публикует события при создании и удалении пользователя.
 
-Отправка уведомлений по электронной почте будет реализована в отдельном проекте `notification-service`, который выступает в роли Consumer.
+`notification-service` предназначен для получения этих событий (Consumer) и отправки уведомлений по электронной почте.
 
-Оба сервиса взаимодействуют через Kafka Broker и не зависят друг от друга на уровне Java-классов.
+Оба сервиса являются самостоятельными Maven-модулями внутри общего проекта `homework` и взаимодействуют через Kafka Broker.
 
-## 2. Инфраструктура
+## 2. Структура проекта
+
+Проект имеет многомодульную Maven-структуру:
+
+```text
+homework/
+├── pom.xml
+├── docker-compose.yml
+├── user-service/
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       └── test/
+└── notification-service/
+    └── pom.xml
+```
+
+Назначение POM-файлов:
+
+- `homework/pom.xml` — родительский POM, управляющий модулями и общими настройками.
+- `user-service/pom.xml` — зависимости и настройки User Service.
+- `notification-service/pom.xml` — зависимости и настройки Notification Service.
+
+Исходный код User Service, включая Kafka Producer, находится в `user-service`.
+
+`notification-service` создан как отдельный Maven-модуль. Его реализация Consumer и отправки email ещё предстоит.
+
+## 3. Инфраструктура
 
 Для локального запуска Kafka используется Docker Compose.
 
 - Kafka version: `4.1.2`
-- Docker Compose: `docker-compose.yml`
+- Docker Compose: `docker-compose.yml` в корне проекта
 - Bootstrap server: `localhost:9092`
 - Topic: `user-events`
 
-Запуск Kafka из корневой папки проекта:
+Запуск Kafka из корневой папки `homework`:
 
 ```bash
 docker compose up -d
@@ -37,7 +64,7 @@ docker ps
 docker compose down
 ```
 
-## 3. Формат Kafka-события
+## 4. Формат Kafka-события
 
 Для взаимодействия между сервисами используется JSON.
 
@@ -68,7 +95,9 @@ docker compose down
 
 Важно: Consumer должен использовать именно этот формат сообщения.
 
-## 4. Реализация Producer
+DTO можно реализовать независимо в `notification-service`, сохранив совместимость с JSON-контрактом.
+
+## 5. Реализация Producer
 
 В `user-service` добавлены следующие компоненты:
 
@@ -103,9 +132,9 @@ docker compose down
 
 Используется асинхронная отправка через `KafkaTemplate`.
 
-## 5. Конфигурация
+## 6. Конфигурация
 
-В `application.properties` добавлены настройки:
+В `user-service/src/main/resources/application.properties` добавлены настройки:
 
 ```properties
 spring.kafka.bootstrap-servers=localhost:9092
@@ -114,7 +143,7 @@ spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.Strin
 spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
 ```
 
-## 6. Что необходимо учесть при реализации Consumer
+## 7. Что необходимо реализовать в Consumer
 
 При разработке `notification-service` необходимо:
 
@@ -134,9 +163,7 @@ spring.kafka.producer.value-serializer=org.springframework.kafka.support.seriali
 
 > Здравствуйте! Ваш аккаунт был удалён.
 
-DTO можно реализовать независимо в `notification-service`, сохранив совместимость с JSON-контрактом выше.
-
-## 7. Проверка работоспособности
+## 8. Проверка работоспособности Producer
 
 Для ручной проверки сообщений можно запустить Kafka Console Consumer:
 
@@ -149,12 +176,13 @@ docker exec -it homework-kafka /opt/kafka/bin/kafka-console-consumer.sh --bootst
 ### Результаты проверки
 
 - Создание пользователя через REST API — проверено.
-- Получение события `CREATE` через Kafka Consumer — проверено.
+- Получение события `CREATE` через Kafka Console Consumer — проверено.
 - Удаление пользователя через REST API — проверено.
-- Получение события `DELETE` через Kafka Consumer — проверено.
+- Получение события `DELETE` через Kafka Console Consumer — проверено.
 - Все 55 тестов `user-service` успешно проходят.
+- Сборка многомодульного Maven-проекта — успешно (`BUILD SUCCESS`).
 
-## 8. Важное замечание
+## 9. Важное замечание
 
 Отправка Kafka-события выполняется после коммита транзакции БД. Это защищает от отправки событий при откате транзакции, но не обеспечивает атомарность между БД и Kafka.
 
