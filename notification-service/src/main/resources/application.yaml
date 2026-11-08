@@ -28,5 +28,6 @@ spring:
           writetimeout: 10000
 
 app:
+  site-name: UserSpace
   mail:
     from: ${MAIL_FROM}

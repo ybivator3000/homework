@@ -2,6 +2,7 @@ package ru.aston.notification.consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import ru.aston.notification.dto.UserEvent;
@@ -16,10 +17,12 @@ public class UserEventConsumer {
 
     private final JsonMapper jsonMapper;
     private final EmailService emailService;
+    private final String siteName;
 
-    public UserEventConsumer(JsonMapper jsonMapper, EmailService emailService) {
+    public UserEventConsumer(JsonMapper jsonMapper, EmailService emailService, @Value("${app.site-name}") String siteName) {
         this.jsonMapper = jsonMapper;
         this.emailService = emailService;
+        this.siteName = siteName;
     }
 
     @KafkaListener(topics = "user-events")
@@ -37,7 +40,8 @@ public class UserEventConsumer {
             case CREATE -> emailService.sendEmail(
                     event.email(),
                     "Регистрация",
-                    "Здравствуйте! Ваш аккаунт на сайте был успешно создан."
+                    "Здравствуйте! Ваш аккаунт на сайте %s был успешно создан."
+                            .formatted(siteName)
             );
             case DELETE -> emailService.sendEmail(
                     event.email(),
