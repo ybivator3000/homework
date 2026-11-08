@@ -2,6 +2,7 @@ package ru.aston.homework.service.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -11,6 +12,7 @@ import ru.aston.homework.dto.UserUpdateRequest;
 import ru.aston.homework.entity.User;
 import ru.aston.homework.exception.EmailAlreadyTakenException;
 import ru.aston.homework.exception.UserNotFoundException;
+import ru.aston.homework.kafka.dto.UserEvent;
 import ru.aston.homework.repository.UserRepository;
 import ru.aston.homework.service.UserService;
 
@@ -26,11 +28,14 @@ public class UserServiceImpl implements UserService {
             LoggerFactory.getLogger(UserServiceImpl.class);
 
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public UserServiceImpl(
-            UserRepository userRepository
+            UserRepository userRepository,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -41,13 +46,24 @@ public class UserServiceImpl implements UserService {
         if (userRepository
                 .findByEmailIgnoreCase(request.email())
                 .isPresent()) {
-            log.warn("Create user failed: email already taken email={}", request.email());
+            log.warn(
+                    "Create user failed: email already taken email={}",
+                    request.email()
+            );
             throw new EmailAlreadyTakenException(request.email());
         }
 
         User saved = userRepository.saveAndFlush(toEntity(request));
 
-        log.info("User created: id={}, email={}", saved.getId(), saved.getEmail());
+        eventPublisher.publishEvent(
+                new UserEvent(saved.getEmail(), UserEvent.Operation.CREATE)
+        );
+
+        log.info(
+                "User created: id={}, email={}",
+                saved.getId(),
+                saved.getEmail()
+        );
 
         return toResponse(saved);
     }
@@ -60,7 +76,10 @@ public class UserServiceImpl implements UserService {
         User user = userRepository
                 .findById(request.id())
                 .orElseThrow(() -> {
-                    log.warn("Update user failed: not found id={}", request.id());
+                    log.warn(
+                            "Update user failed: not found id={}",
+                            request.id()
+                    );
                     return new UserNotFoundException(request.id());
                 });
 
@@ -70,25 +89,29 @@ public class UserServiceImpl implements UserService {
             userRepository
                     .findByEmailIgnoreCase(request.email())
                     .ifPresent(other -> {
-                        if (!other
-                                .getId()
-                                .equals(user.getId())) {
-                            log.warn("Update user failed: email taken email={}", request.email());
-                            throw new EmailAlreadyTakenException(request.email());
+                        if (!other.getId().equals(user.getId())) {
+                            log.warn(
+                                    "Update user failed: email taken email={}",
+                                    request.email()
+                            );
+                            throw new EmailAlreadyTakenException(
+                                    request.email()
+                            );
                         }
                     });
         }
 
         user.setName(request.name());
-        user.setEmail(request
-                .email()
-                .toLowerCase(Locale.ROOT));
+        user.setEmail(request.email().toLowerCase(Locale.ROOT));
         user.setAge(request.age());
 
         User updated = userRepository.saveAndFlush(user);
 
-        log.info("User updated: id={}, email={}",
-                updated.getId(), updated.getEmail());
+        log.info(
+                "User updated: id={}, email={}",
+                updated.getId(),
+                updated.getEmail()
+        );
 
         return toResponse(updated);
     }
@@ -127,11 +150,20 @@ public class UserServiceImpl implements UserService {
         User user = userRepository
                 .findById(id)
                 .orElseThrow(() -> {
-                    log.warn("Delete user failed: not found id={}", id);
+                    log.warn(
+                            "Delete user failed: not found id={}",
+                            id
+                    );
                     return new UserNotFoundException(id);
                 });
 
+        String email = user.getEmail();
+
         userRepository.delete(user);
+
+        eventPublisher.publishEvent(
+                new UserEvent(email, UserEvent.Operation.DELETE)
+        );
 
         log.info("User deleted: id={}", id);
     }

@@ -1,0 +1,9 @@
+### Create user
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "name": "Kafka Test",
+  "email": "kafka-test-2026@example.com",
+  "age": 22
+}
