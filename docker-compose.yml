@@ -27,6 +27,11 @@ services:
       - kafka_data:/var/lib/kafka/data
 
     restart: unless-stopped
-
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: homework-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 volumes:
   kafka_data:
