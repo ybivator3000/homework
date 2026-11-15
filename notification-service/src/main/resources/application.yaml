@@ -20,9 +20,9 @@ spring:
     properties:
       mail:
         smtp:
-          auth: true
+          auth: false
           starttls:
-            enable: true
+            enable: false
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000

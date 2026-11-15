@@ -1,4 +1,7 @@
 package ru.aston.notification.dto;
 
-public class NotificationApiResponse {
+public record NotificationApiResponse(
+        String name,
+        String description
+) {
 }

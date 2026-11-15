@@ -17,8 +17,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 @SpringBootTest
 @AutoConfigureMockMvc
 class NotificationControllerIntegrationTest {
@@ -51,13 +52,32 @@ class NotificationControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @BeforeEach
-    void clearEmails() throws Exception{
+    void clearEmails() throws Exception {
         greenMail.purgeEmailFromAllMailboxes();
     }
 
     @AfterAll
     static void stopGreenMail() {
         greenMail.stop();
+    }
+
+
+    @Test
+    void getApiInfo_shouldReturnHateoasLinks() throws Exception {
+
+        mockMvc.perform(get("/api/v1/notifications"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Notification API"))
+                .andExpect(jsonPath("$.description")
+                        .value("API для отправки уведомлений по электронной почте"))
+                .andExpect(jsonPath("$._links.self.href")
+                        .value(org.hamcrest.Matchers.endsWith(
+                                "/api/v1/notifications"
+                        )))
+                .andExpect(jsonPath("$._links.send.href")
+                        .value(org.hamcrest.Matchers.endsWith(
+                                "/api/v1/notifications/send"
+                        )));
     }
 
     @Test
@@ -72,7 +92,20 @@ class NotificationControllerIntegrationTest {
                                   "operation": "CREATE"
                                 }
                                 """))
-                .andExpect(status().isAccepted());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.operation").value("CREATE"))
+                .andExpect(jsonPath("$.message")
+                        .value("Уведомление успешно отправлено"))
+                .andExpect(jsonPath("$._links.api.href")
+                        .value(org.hamcrest.Matchers.endsWith(
+                                "/api/v1/notifications"
+                        )))
+                .andExpect(jsonPath("$._links.self.href")
+                        .value(org.hamcrest.Matchers.endsWith(
+                                "/api/v1/notifications/send"
+                        )));
+
 
         assertThat(greenMail.waitForIncomingEmail(5000, 1))
                 .isTrue();
@@ -94,6 +127,7 @@ class NotificationControllerIntegrationTest {
                 .contains("Ваш аккаунт на сайте ваш сайт был успешно создан");
     }
 
+
     @Test
     void sendEmail_whenDeleteOperation_shouldSendDeletionEmail()
             throws Exception {
@@ -106,7 +140,15 @@ class NotificationControllerIntegrationTest {
                                   "operation": "DELETE"
                                 }
                                 """))
-                .andExpect(status().isAccepted());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.operation").value("DELETE"))
+                .andExpect(jsonPath("$.message")
+                        .value("Уведомление успешно отправлено"))
+                .andExpect(jsonPath("$._links.api.href")
+                        .value(org.hamcrest.Matchers.endsWith(
+                                "/api/v1/notifications"
+                        )));
 
         assertThat(greenMail.waitForIncomingEmail(5000, 1))
                 .isTrue();
