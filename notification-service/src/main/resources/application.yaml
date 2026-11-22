@@ -12,6 +12,20 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  resilience4j:
+    circuitbreaker:
+      instances:
+        smtp:
+          sliding-window-type: COUNT_BASED
+          sliding-window-size: 5
+          minimum-number-of-calls: 5
+          failure-rate-threshold: 50
+
+          wait-duration-in-open-state: 10s
+          permitted-number-of-calls-in-half-open-state: 2
+
+          automatic-transition-from-open-to-half-open-enabled: true
+
   mail:
     host: ${MAIL_HOST}
     port: ${MAIL_PORT:587}
