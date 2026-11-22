@@ -5,7 +5,43 @@ spring:
   config:
     import: "configserver:http://localhost:8888"
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
+  eureka:
+    client:
+      service-url:
+        defaultZone: http://localhost:8761/eureka/
+     
+  resilience4j:
+    circuitbreaker:
+      instances:
+        smtp:
+          sliding-window-type: COUNT_BASED
+          sliding-window-size: 5
+          minimum-number-of-calls: 5
+          failure-rate-threshold: 50
+
+          wait-duration-in-open-state: 10s
+          permitted-number-of-calls-in-half-open-state: 2
+
+          automatic-transition-from-open-to-half-open-enabled: true
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+
+app:
+  site-name: UserSpace
+  mail:
+    from: ${MAIL_FROM}
+
+
