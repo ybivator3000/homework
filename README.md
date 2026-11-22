@@ -1,3 +1,163 @@
+# Модуль 7
+
+## Описание
+
+**Microservices Patterns — Spring Cloud**
+
+Добавление в существующую микросервисную систему основных паттернов микросервисной архитектуры:
+
+- **API Gateway** — единая точка входа для HTTP-запросов.
+- **Service Discovery** — регистрация и обнаружение микросервисов.
+- **External Configuration** — централизованное управление конфигурациями.
+- **Circuit Breaker** — защита приложения от повторяющихся ошибок при обращении к внешним сервисам.
+
+Реализация выполнена с использованием Spring Cloud, Netflix Eureka и Resilience4j.
+
+## Технологии
+
+- Java 21
+- Spring Boot 4.1.2
+- Spring Cloud 2025.1.5
+- Spring Cloud Gateway WebFlux
+- Spring Cloud Config Server
+- Netflix Eureka
+- Spring Cloud LoadBalancer
+- Spring Cloud Circuit Breaker
+- Resilience4j
+- Spring Boot Actuator
+- Maven
+
+## Реализация паттернов
+
+### 1. API Gateway
+
+Создан отдельный модуль `api-gateway` на основе Spring Cloud Gateway.
+
+Gateway запускается на порту `8081` и является единой точкой входа для запросов к микросервисам.
+
+Настроены следующие маршруты:
+
+| Путь                       | Микросервис                 |
+|----------------------------|-----------------------------|
+| `/api/users/**`            | `lb://user-service`         |
+| `/api/v1/notifications/**` | `lb://notification-service` |
+
+Для маршрутизации используются Eureka и Spring Cloud LoadBalancer, что позволяет обращаться к сервисам по их именам без указания фиксированных адресов.
+
+Конфигурация маршрутов хранится в Config Server.
+
+Для диагностики подключён Spring Boot Actuator.
+
+Адрес Gateway: `http://localhost:8081`
+
+Просмотр маршрутов: `http://localhost:8081/actuator/gateway/routes`
+
+### 2. Service Discovery
+
+Создан модуль `discovery-service` на основе Netflix Eureka Server.
+
+Eureka обеспечивает регистрацию микросервисов и обнаружение доступных экземпляров приложений.
+
+К Eureka подключены `user-service`, `notification-service` и `api-gateway`.
+
+Использование Service Discovery позволяет API Gateway динамически определять адреса микросервисов.
+
+Веб-интерфейс Eureka: `http://localhost:8761`
+
+### 3. External Configuration
+
+Создан модуль `config-server` на основе Spring Cloud Config Server.
+
+Config Server запускается на порту `8888` и предоставляет централизованные конфигурации микросервисам.
+
+Используется профиль `native`.
+
+Конфигурационные файлы расположены в директории:
+
+`config-server/src/main/resources/config-repo/`
+
+В ней находятся:
+
+- `user-service.properties`
+- `notification-service.yml`
+- `api-gateway.yml`
+
+Микросервисы получают настройки через Spring Cloud Config Client с использованием `spring.config.import`.
+
+Параметры подключения к базе данных, Kafka и SMTP передаются через переменные окружения.
+
+Адрес Config Server: `http://localhost:8888`
+
+### 4. Circuit Breaker
+
+Паттерн Circuit Breaker реализован в `notification-service` с использованием Spring Cloud Circuit Breaker и Resilience4j.
+
+Защита применяется к отправке электронных писем через SMTP.
+
+В классе `EmailService` используется Circuit Breaker с именем `smtp`.
+
+При повторяющихся ошибках отправки писем Circuit Breaker ограничивает обращения к недоступному SMTP-сервису, предотвращая постоянные повторные попытки выполнения операции.
+
+Предусмотрены состояния:
+
+- `CLOSED` — запросы выполняются в обычном режиме.
+- `OPEN` — обращения к SMTP временно блокируются.
+- `HALF_OPEN` — выполняются пробные запросы для проверки восстановления сервиса.
+
+Настройки Circuit Breaker включают количество анализируемых вызовов, порог ошибок и время ожидания перед повторной проверкой.
+
+Для проверки реализации добавлен тест `EmailServiceCircuitBreakerTest`, проверяющий переходы между состояниями при ошибках SMTP и последующем восстановлении.
+
+## Структура проекта
+
+| Модуль                 | Порт | Назначение                         |
+|------------------------|------|------------------------------------|
+| `config-server`        | 8888 | Централизованная конфигурация      |
+| `discovery-service`    | 8761 | Service Discovery                  |
+| `api-gateway`          | 8081 | Маршрутизация HTTP-запросов        |
+| `user-service`         | 8080 | Управление пользователями          |
+| `notification-service` | 8082 | Обработка событий и отправка email |
+
+## Запуск приложения
+
+Для запуска микросервисной системы необходимо:
+
+1. Запустить `ConfigServerApplication`.
+2. Запустить `DiscoveryServiceApplication`.
+3. Запустить `JpaProbeApplication` (`user-service`).
+4. Запустить `NotificationServiceApplication`.
+5. Запустить `ApiGatewayApplication`.
+
+Для работы приложения необходимо настроить PostgreSQL, Kafka и параметры SMTP.
+
+## Проверка работы
+
+Проверить получение конфигурации:
+
+`http://localhost:8888/user-service/default`
+
+Проверить регистрацию сервисов:
+
+`http://localhost:8761`
+
+Проверить маршрутизацию через Gateway:
+
+`GET http://localhost:8081/api/users`
+
+Проверить состояние Gateway:
+
+`http://localhost:8081/actuator/health`
+
+Проверить REST API пользователей через Swagger:
+
+`http://localhost:8080/swagger-ui/index.html`
+
+Для проверки Circuit Breaker предусмотрен тест `EmailServiceCircuitBreakerTest`, моделирующий недоступность SMTP-сервиса и последующее восстановление.
+
+
+
+
+
 # Модуль 6
 
 ## Описание
